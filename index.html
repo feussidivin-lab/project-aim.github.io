@@ -1,1251 +1,193 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#171a18">
-    <title>Rivals Aim Lab</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-
-        :root {
-            color-scheme: dark;
-            --ink: #f1f1e9;
-            --muted: #919892;
-            --panel: #202421;
-            --panel-raised: #282d29;
-            --line: #3a403b;
-            --red: #ff654c;
-            --lime: #d4f477;
-            --cream: #f1f1e9;
-            --page: #171a18;
-            font-family: 'DM Sans', sans-serif;
-            font-synthesis: none;
-            text-rendering: optimizeLegibility;
-        }
-
-        * { box-sizing: border-box; }
-        body { margin: 0; min-width: 320px; min-height: 100vh; color: var(--ink); background: var(--page); }
-        button { font: inherit; }
-        button:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
-
-        .app-shell { min-height: 100vh; background: radial-gradient(ellipse at 34% 0%, #30352d 0, #202420 28%, var(--page) 68%); }
-        .topbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 4.2vw; border-bottom: 1px solid #ffffff12; }
-        .brand { display: flex; align-items: center; gap: 12px; }
-        .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; color: #181a17; background: var(--lime); clip-path: polygon(0 0,100% 0,100% 76%,67% 100%,0 100%); font: 800 21px/1 'Barlow Condensed',sans-serif; }
-        .brand-name { font: 700 20px/1 'Barlow Condensed',sans-serif; letter-spacing: .5px; text-transform: uppercase; }
-        .brand-name span { color: var(--lime); }
-        .topbar-right { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 12px; }
-        .local-tag { display: flex; align-items: center; gap: 7px; }
-        .local-tag::before { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); content: ''; }
-        .session-button { border: 1px solid #ffffff26; background: transparent; color: var(--ink); padding: 9px 13px; cursor: pointer; font-size: 12px; font-weight: 700; }
-        .session-button:hover { border-color: var(--lime); color: var(--lime); }
-
-        .workspace { width: min(1600px, 100%); margin: 0 auto; padding: 24px 4.2vw 36px; display: grid; grid-template-columns: minmax(0,1fr) 326px; gap: 24px; }
-        .arena-column { min-width: 0; }
-        .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin: 0 0 15px; }
-        .mobile-practice-controls { display: none; }
-        .eyebrow { margin: 0 0 4px; color: var(--lime); font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
-        h1, h2, h3, p { margin-top: 0; }
-        h1 { margin-bottom: 0; font: 700 29px/1 'Barlow Condensed',sans-serif; letter-spacing: .1px; }
-        .round-clock { color: var(--muted); font-size: 12px; white-space: nowrap; }
-        .round-clock strong { color: var(--ink); font: 700 21px/1 'Barlow Condensed',sans-serif; margin-left: 6px; }
-
-        .arena-frame { position: relative; overflow: hidden; min-height: 450px; height: min(61vh, 660px); background: #242a26; border: 1px solid #ffffff18; }
-        #arena-scene { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
-        #arena { display: block; width: 100%; height: 100%; cursor: crosshair; }
-        #arena { position: absolute; inset: 0; z-index: 1; opacity: 0; }
-        #arena.is-playing { cursor: none; touch-action: none; }
-        body.is-playing, body.is-playing * { cursor: none !important; }
-        #arena-crosshair { position: absolute; top: 50%; left: 50%; z-index: 3; width: 28px; height: 28px; transform: translate(-50%,-50%); pointer-events: none; }
-        #arena-crosshair::before, #arena-crosshair::after { position: absolute; content: ''; background: #f1f1e9; box-shadow: 0 0 5px #101510; }
-        #arena-crosshair::before { top: 13px; left: 0; width: 28px; height: 2px; }
-        #arena-crosshair::after { top: 0; left: 13px; width: 2px; height: 28px; }
-        #arena-crosshair.is-aiming { width: 16px; height: 16px; }
-        #arena-crosshair.is-aiming::before { top: 7px; width: 16px; }
-        #arena-crosshair.is-aiming::after { left: 7px; height: 16px; }
-        .sniper-scope { position: absolute; inset: 0; z-index: 3; overflow: hidden; pointer-events: none; background: radial-gradient(circle at center, transparent 0 44%, #080a0e26 46%, #050609b8 53%, #030405 63%); }
-        .sniper-scope[hidden] { display: none; }
-        .scope-reticle { position: absolute; inset: 0; }
-        .scope-reticle::before, .scope-reticle::after { position: absolute; content: ''; background: #111319bd; box-shadow: 0 0 1px #dce0ed; }
-        .scope-reticle::before { top: 50%; left: 0; width: 100%; height: 1px; }
-        .scope-reticle::after { top: 0; left: 50%; width: 1px; height: 100%; }
-        .scope-edge { position: absolute; top: 50%; left: 50%; width: auto; height: 90%; aspect-ratio: 1; border: 1px solid #101319a8; border-radius: 50%; box-shadow: inset 0 0 18px #11141b77; transform: translate(-50%,-50%); }
-        .scope-center { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; border: 2px solid #ff4942; border-radius: 50%; box-shadow: 0 0 3px #ff4942; transform: translate(-50%,-50%); }
-        .scope-center::after { position: absolute; top: 50%; left: 50%; width: 5px; height: 5px; border-radius: 50%; background: #ff4942; content: ''; transform: translate(-50%,-50%); }
-        .aim-toolbar { min-height: 42px; display: flex; align-items: center; gap: 12px; margin: 0 0 10px; padding: 6px 10px; border: 1px solid #ffffff18; background: #1d211e; }
-        .aim-toolbar label { color: var(--ink); font-size: 10px; font-weight: 700; white-space: nowrap; }
-        .aim-toolbar output { margin-left: 5px; color: var(--lime); font-variant-numeric: tabular-nums; }
-        .aim-toolbar input { width: min(180px,24vw); accent-color: var(--lime); cursor: ew-resize; }
-        .aim-hint { margin-left: auto; color: var(--muted); font-size: 10px; white-space: nowrap; }
-        .mobile-aim-hint { display: none; }
-        .ads-button { position: absolute; bottom: 16px; left: 16px; z-index: 3; min-width: 70px; min-height: 46px; border: 1px solid #f1f1e988; color: var(--ink); background: #151b18cc; font-size: 11px; font-weight: 800; letter-spacing: .4px; cursor: pointer; touch-action: none; }
-        .ads-button[aria-pressed="true"] { border-color: var(--lime); color: var(--lime); background: #303a2dcc; }
-        .ads-button[hidden] { display: none; }
-        .fire-button { position: absolute; right: 16px; bottom: 16px; z-index: 3; width: 88px; height: 64px; border: 1px solid #ff8a76; color: #fff5ee; background: #b83f32dd; font-size: 13px; font-weight: 800; letter-spacing: .8px; cursor: pointer; touch-action: none; }
-        .fire-button:active { background: #ed5947; }
-        .fire-button[hidden] { display: none !important; }
-        .arena-topline { position: absolute; inset: 15px 16px auto; z-index: 2; display: flex; justify-content: space-between; align-items: start; pointer-events: none; }
-        .arena-label { display: flex; align-items: center; gap: 8px; color: #e8e9df; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 1px 4px #000; }
-        .arena-label::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 12px #ff654c99; }
-        .arena-keys { color: #e3e5dc; font-size: 10px; text-shadow: 0 1px 4px #000; }
-        .arena-keys kbd { padding: 2px 5px; margin-left: 4px; border: 1px solid #ffffff40; background: #1119; font: inherit; }
-        .arena-overlay { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; padding: 24px; background: #14171372; }
-        .arena-overlay[hidden] { display: none; }
-        .start-card { width: min(390px,100%); padding: 25px 26px 23px; border-top: 2px solid var(--lime); background: #1d211eee; box-shadow: 0 18px 60px #0006; text-align: center; animation: arrive .35s ease-out both; }
-        @keyframes arrive { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
-        .start-card .eyebrow { margin-bottom: 8px; }
-        .start-card h2 { margin-bottom: 7px; font: 700 30px/1 'Barlow Condensed',sans-serif; text-transform: uppercase; }
-        .start-card p { margin-bottom: 17px; color: #b6bcb5; font-size: 12px; line-height: 1.55; }
-        .mobile-start-hint { display: none; }
-        .primary-button { min-height: 43px; border: 0; padding: 0 19px; background: var(--lime); color: #1c2118; cursor: pointer; font-size: 12px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; }
-        .primary-button:hover { background: #e2ff97; }
-        .secondary-button { min-height: 39px; border: 1px solid var(--line); padding: 0 14px; color: var(--ink); background: transparent; cursor: pointer; font-size: 11px; font-weight: 700; }
-        .secondary-button:hover { border-color: #a5b098; }
-
-        .stats-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); margin-top: 13px; border: 1px solid #ffffff18; background: #1d211e; }
-        .stat { min-width: 0; padding: 11px 15px; border-right: 1px solid #ffffff16; }
-        .stat:last-child { border-right: 0; }
-        .stat span { display: block; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
-        .stat strong { display: block; margin-top: 3px; color: var(--ink); font: 600 22px/1 'Barlow Condensed',sans-serif; }
-
-        .control-rail { min-width: 0; padding-top: 2px; }
-        .rail-section { padding: 17px 0 19px; border-bottom: 1px solid #ffffff18; }
-        .rail-section:first-child { padding-top: 0; }
-        .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
-        .section-heading h2 { margin-bottom: 0; font: 700 16px/1 'Barlow Condensed',sans-serif; text-transform: uppercase; letter-spacing: .3px; }
-        .section-heading small { color: var(--muted); font-size: 10px; }
-        .option-list { display: grid; gap: 7px; }
-        .weapon-option { width: 100%; min-height: 53px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; text-align: left; border: 1px solid var(--line); color: var(--ink); background: #1d211e; cursor: pointer; }
-        .weapon-option:hover { border-color: #8b9787; }
-        .weapon-option[aria-pressed="true"] { border-color: var(--lime); background: #293026; box-shadow: inset 3px 0 var(--lime); }
-        .weapon-icon { width: 28px; height: 28px; display: grid; place-items: center; color: var(--lime); background: #d4f47714; font: 700 11px 'Barlow Condensed',sans-serif; }
-        .weapon-copy strong { display: block; font-size: 11px; }
-        .weapon-copy small { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; }
-        .keycap { color: #a5aca4; font-size: 10px; }
-
-        .segmented { display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--line); }
-        .segment { min-width: 0; min-height: 34px; padding: 4px 3px; border: 0; border-right: 1px solid var(--line); color: #abb2ab; background: #1d211e; cursor: pointer; font-size: 10px; font-weight: 700; }
-        .segment:last-child { border-right: 0; }
-        .segment[aria-pressed="true"] { color: #1d2118; background: var(--lime); }
-        .duration-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; color: var(--muted); font-size: 10px; }
-        .duration-options { display: flex; gap: 5px; }
-        .duration-options button { min-width: 42px; min-height: 28px; border: 1px solid var(--line); color: var(--muted); background: #1d211e; cursor: pointer; font-size: 10px; }
-        .duration-options button[aria-pressed="true"] { border-color: var(--lime); color: var(--lime); }
-
-        .coach-section { padding-top: 18px; }
-        .coach-kicker { display: flex; align-items: center; gap: 7px; color: var(--lime); font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
-        .coach-kicker::before { content: ''; width: 15px; height: 1px; background: var(--lime); }
-        .coach-title { margin: 9px 0 6px; font: 700 22px/1.05 'Barlow Condensed',sans-serif; text-transform: uppercase; }
-        .coach-copy { margin: 0; color: #abb2ab; font-size: 11px; line-height: 1.55; }
-        .recommendation { margin-top: 14px; padding: 11px 12px; border-left: 2px solid var(--red); background: #ffffff08; }
-        .recommendation-label { margin-bottom: 4px; color: #aab1a9; font-size: 9px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; }
-        .recommendation strong { display: block; font-size: 11px; line-height: 1.4; }
-        .recommendation p { margin: 4px 0 0; color: #abb2ab; font-size: 10px; line-height: 1.5; }
-        .recommendation-action { width: 100%; margin-top: 9px; }
-        .coach-note { margin: 12px 0 0; color: #798179; font-size: 9px; line-height: 1.5; }
-        .footer-line { padding-top: 13px; color: #747d75; font-size: 9px; }
-
-        @media (min-width: 1500px) { .workspace { padding-right: 60px; padding-left: 60px; } }
-        @media (max-width: 900px) {
-            .workspace { grid-template-columns: minmax(0,1fr) 280px; gap: 18px; padding-right: 20px; padding-left: 20px; }
-            .arena-frame { min-height: 380px; height: 55vh; }
-            .topbar { padding-right: 20px; padding-left: 20px; }
-        }
-        @media (max-width: 700px) {
-            .topbar { min-height: 61px; }
-            .topbar-right { gap: 10px; }
-            .local-tag { font-size: 0; }
-            .session-button { padding: 8px 9px; }
-            .workspace { display: flex; flex-direction: column; gap: 17px; padding: 19px 14px 28px; }
-            .page-heading { align-items: center; }
-            h1 { font-size: 26px; }
-            .aim-toolbar { gap: 7px; padding: 6px 8px; }
-            .aim-toolbar label { font-size: 9px; }
-            .aim-toolbar input { width: min(105px,22vw); }
-            .desktop-aim-hint { display: none; }
-            .mobile-aim-hint { display: block; font-size: 9px; }
-            .mobile-start-hint { display: inline; }
-            .desktop-start-hint { display: none; }
-            .mobile-practice-controls { display: grid; gap: 9px; margin: 0 0 11px; }
-            .mobile-control-heading { margin: 0 0 6px; color: #aab1a9; font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
-            .mobile-practice-controls .option-list { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 5px; }
-            .mobile-practice-controls .weapon-option { min-height: 54px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 5px 2px; }
-            .mobile-practice-controls .weapon-icon { width: auto; height: auto; background: transparent; font-size: 11px; }
-            .mobile-practice-controls .weapon-copy { display: block; text-align: center; }
-            .mobile-practice-controls .weapon-copy strong { font-size: 11px; }
-            .mobile-practice-controls .keycap { display: none; }
-            .mobile-drill-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; }
-            .mobile-practice-controls .segment { min-height: 43px; font-size: 12px; }
-            .mobile-practice-controls .duration-options button { min-width: 46px; min-height: 43px; font-size: 12px; }
-            .control-rail .weapon-section, .control-rail .drill-section { display: none; }
-            .arena-frame { height: 56vh; min-height: 350px; max-height: 560px; }
-            .arena-keys { display: none; }
-            .stats-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
-            .stat:nth-child(2) { border-right: 0; }
-            .stat:nth-child(-n+2) { border-bottom: 1px solid #ffffff16; }
-            .stat span { font-size: 10px; }
-            .stat strong { font-size: 25px; }
-            .control-rail { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
-            .rail-section:nth-child(2) { border-bottom: 1px solid #ffffff18; }
-            .coach-section { grid-column: 1 / -1; }
-        }
-        @media (max-width: 420px) {
-            .brand-name { font-size: 17px; }
-            .workspace { padding-right: 11px; padding-left: 11px; }
-            .control-rail { grid-template-columns: 1fr; }
-            .rail-section:nth-child(2) { border-bottom: 1px solid #ffffff18; }
-            .arena-frame { min-height: 320px; height: 50vh; }
-            .stat { padding: 10px 12px; }
-        }
-        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
-    </style>
-</head>
-<body>
-    <div class="app-shell">
-        <header class="topbar">
-            <div class="brand" aria-label="Rivals Aim Lab">
-                <div class="brand-mark" aria-hidden="true">R</div>
-                <div class="brand-name">RIVALS <span>AIM LAB</span></div>
-            </div>
-            <div class="topbar-right">
-                <span class="local-tag">Practice data stays on this device</span>
-                <button class="session-button" id="end-session" type="button" hidden>End session</button>
-            </div>
-        </header>
-
-        <main class="workspace">
-            <section class="arena-column" aria-label="Aim practice">
-                <div class="page-heading">
-                    <div>
-                        <p class="eyebrow">Practice range / 01</p>
-                        <h1 id="drill-heading">Flick training</h1>
-                    </div>
-                    <div class="round-clock" aria-live="polite">TIME <strong id="timer">30</strong></div>
-                </div>
-
-                <div class="aim-toolbar" aria-label="Aim settings">
-                    <label for="aim-sensitivity">Aim sensitivity <output id="sensitivity-value" for="aim-sensitivity">1.0x</output></label>
-                    <input id="aim-sensitivity" type="range" min="0.4" max="2.4" step="0.1" value="1" aria-label="Aim sensitivity">
-                    <span class="aim-hint desktop-aim-hint">Hold right mouse or ADS to zoom</span>
-                    <span class="aim-hint mobile-aim-hint">Drag to aim | tap ADS to toggle</span>
-                </div>
-
-                <div class="mobile-practice-controls">
-                    <div>
-                        <div class="mobile-control-heading">Weapon</div>
-                        <div class="option-list" role="group" aria-label="Weapon">
-                            <button class="weapon-option" type="button" data-weapon="ar" aria-label="Assault rifle" aria-pressed="true"><span class="weapon-icon">AR</span><span class="weapon-copy"><strong>Assault</strong></span></button>
-                            <button class="weapon-option" type="button" data-weapon="sniper" aria-label="Sniper" aria-pressed="false"><span class="weapon-icon">SR</span><span class="weapon-copy"><strong>Sniper</strong></span></button>
-                            <button class="weapon-option" type="button" data-weapon="burst" aria-label="Burst rifle" aria-pressed="false"><span class="weapon-icon">BR</span><span class="weapon-copy"><strong>Burst</strong></span></button>
-                            <button class="weapon-option" type="button" data-weapon="shotgun" aria-label="Shotgun" aria-pressed="false"><span class="weapon-icon">SG</span><span class="weapon-copy"><strong>Shotgun</strong></span></button>
-                        </div>
-                    </div>
-                    <div class="mobile-drill-row">
-                        <div>
-                            <div class="mobile-control-heading">Drill</div>
-                            <div class="segmented" role="group" aria-label="Aim drill">
-                                <button class="segment" type="button" data-drill="flick" aria-pressed="true">Flick</button>
-                                <button class="segment" type="button" data-drill="tracking" aria-pressed="false">Track</button>
-                                <button class="segment" type="button" data-drill="precision" aria-pressed="false">Precision</button>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="mobile-control-heading">Round</div>
-                            <div class="duration-options" role="group" aria-label="Round length">
-                                <button type="button" data-duration="30" aria-pressed="true">30s</button>
-                                <button type="button" data-duration="60" aria-pressed="false">60s</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="arena-frame">
-                    <canvas id="arena-scene" aria-hidden="true"></canvas>
-                    <canvas id="arena" aria-label="Aim training range. Click the moving target to practice."></canvas>
-                    <div id="arena-crosshair" aria-hidden="true"></div>
-                    <div class="sniper-scope" id="sniper-scope" aria-hidden="true" hidden>
-                        <div class="scope-reticle"></div>
-                        <div class="scope-edge"></div>
-                        <div class="scope-center"></div>
-                    </div>
-                    <button class="ads-button" id="ads-button" type="button" aria-pressed="false" hidden>ADS</button>
-                    <button class="fire-button" id="fire-button" type="button" aria-label="Fire weapon" hidden>FIRE</button>
-                    <div class="arena-topline">
-                        <div class="arena-label" id="arena-mode">Flick / warm-up</div>
-                        <div class="arena-keys"><span id="weapon-readout">Assault rifle · 24/24</span> <kbd>1-4</kbd> Weapon <kbd>R</kbd> Reload <kbd>Esc</kbd> Release mouse</div>
-                    </div>
-                    <div class="arena-overlay" id="arena-overlay">
-                        <div class="start-card" id="start-card">
-                            <p class="eyebrow">Your range is ready</p>
-                            <h2 id="overlay-title">Lock in your aim</h2>
-                            <p id="overlay-copy">Choose a weapon and drill, then take a 30-second round. <span class="desktop-start-hint">Move the mouse to turn your view and line up the center crosshair.</span><span class="mobile-start-hint">Drag the range to aim. Tap FIRE to shoot and ADS to toggle zoom.</span></p>
-                            <button class="primary-button" id="start-session" type="button">Start practice</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stats-strip" aria-label="Current session statistics">
-                    <div class="stat"><span>Targets hit</span><strong id="stat-hits">0</strong></div>
-                    <div class="stat"><span>Shot accuracy</span><strong id="stat-accuracy">--%</strong></div>
-                    <div class="stat"><span>Avg. reaction</span><strong id="stat-reaction">-- ms</strong></div>
-                    <div class="stat"><span>Shots fired</span><strong id="stat-shots">0</strong></div>
-                </div>
-            </section>
-
-            <aside class="control-rail" aria-label="Practice setup and coaching">
-                <section class="rail-section weapon-section">
-                    <div class="section-heading"><h2>Choose weapon</h2><small>Keys 1-4</small></div>
-                    <div class="option-list" role="group" aria-label="Weapon">
-                        <button class="weapon-option" type="button" data-weapon="ar" aria-pressed="true">
-                            <span class="weapon-icon">AR</span><span class="weapon-copy"><strong>Assault rifle</strong><small>Steady follow-up shots</small></span><span class="keycap">1</span>
-                        </button>
-                        <button class="weapon-option" type="button" data-weapon="sniper" aria-pressed="false">
-                            <span class="weapon-icon">SR</span><span class="weapon-copy"><strong>Sniper</strong><small>Single-shot precision</small></span><span class="keycap">2</span>
-                        </button>
-                        <button class="weapon-option" type="button" data-weapon="burst" aria-pressed="false">
-                            <span class="weapon-icon">BR</span><span class="weapon-copy"><strong>Burst rifle</strong><small>Measured burst timing</small></span><span class="keycap">3</span>
-                        </button>
-                        <button class="weapon-option" type="button" data-weapon="shotgun" aria-pressed="false">
-                            <span class="weapon-icon">SG</span><span class="weapon-copy"><strong>Shotgun</strong><small>Close-range spread</small></span><span class="keycap">4</span>
-                        </button>
-                    </div>
-                </section>
-
-                <section class="rail-section drill-section">
-                    <div class="section-heading"><h2>Choose drill</h2><small id="drill-hint">Fast target changes</small></div>
-                    <div class="segmented" role="group" aria-label="Aim drill">
-                        <button class="segment" type="button" data-drill="flick" aria-pressed="true">Flicks</button>
-                        <button class="segment" type="button" data-drill="tracking" aria-pressed="false">Tracking</button>
-                        <button class="segment" type="button" data-drill="precision" aria-pressed="false">Precision</button>
-                    </div>
-                    <div class="duration-row">
-                        <span>Round length</span>
-                        <div class="duration-options" role="group" aria-label="Round length">
-                            <button type="button" data-duration="30" aria-pressed="true">30 sec</button>
-                            <button type="button" data-duration="60" aria-pressed="false">60 sec</button>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="rail-section coach-section" aria-live="polite">
-                    <div class="coach-kicker">Coach / on-device</div>
-                    <h2 class="coach-title" id="coach-title">Your next rep starts here</h2>
-                    <p class="coach-copy" id="coach-copy">Finish one round to get a practice plan based on your shot accuracy and target reaction time.</p>
-                    <div class="recommendation" id="recommendation">
-                        <div class="recommendation-label" id="recommendation-label">Suggested warm-up</div>
-                        <strong id="recommendation-title">Assault rifle / flicks</strong>
-                        <p id="recommendation-copy">Build a baseline with a few quick target changes.</p>
-                        <button class="secondary-button recommendation-action" id="apply-recommendation" type="button" hidden>Set up this drill</button>
-                    </div>
-                    <p class="coach-note">Recommendations are generated locally from this round's hits, misses and reaction times. No external AI service is connected.</p>
-                </section>
-                <div class="footer-line">A standalone practice tool inspired by Rivals weapon styles.</div>
-            </aside>
-        </main>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('arena');
-        const ctx = canvas.getContext('2d');
-        const overlay = document.getElementById('arena-overlay');
-        const startButton = document.getElementById('start-session');
-        const endButton = document.getElementById('end-session');
-        const weaponNames = { ar: 'Assault rifle', sniper: 'Sniper', burst: 'Burst rifle', shotgun: 'Shotgun' };
-        const drillNames = { flick: 'Flicks', tracking: 'Tracking', precision: 'Precision' };
-        const drillDescriptions = {
-            flick: 'Fast target changes',
-            tracking: 'Follow a moving target',
-            precision: 'Small target, clean shots'
-        };
-        const weaponSettings = {
-            ar: { delay: 100, reload: 1050, ammo: 24, infiniteAmmo: true, speed: 1 },
-            sniper: { delay: 720, reload: 1350, ammo: 4, speed: 0.92 },
-            burst: { delay: 360, reload: 1150, ammo: 18, speed: 1.08 },
-            shotgun: { delay: 620, reload: 1350, ammo: 2, speed: 1.18, pellets: 7, spread: 0.022 }
-        };
-
-        let weapon = 'ar';
-        let drill = 'flick';
-        let duration = 30;
-        let playing = false;
-        let roundEndsAt = 0;
-        let lastFrameAt = 0;
-        let lastShotAt = 0;
-        let isFiring = false;
-        let fireInterval = 0;
-        let firePointerId = null;
-        let ammo = weaponSettings[weapon].ammo;
-        let isReloading = false;
-        let reloadTimer = 0;
-        let shots = 0;
-        let hits = 0;
-        let reactionTimes = [];
-        let target = { x: 0.57, y: 0.52, vx: 0.23, vy: 0.1, bornAt: performance.now(), spawnId: 0, pulse: 0 };
-        let camera = { x: 0, y: 0 };
-        let aimSensitivity = 1;
-        let isAiming = false;
-        let lastPointer = null;
-        let lookPointerId = null;
-        let lastTouchAt = 0;
-        let weaponSway = { x: 0, y: 0 };
-        let weaponKick = 0;
-        let currentRecommendation = { weapon: 'ar', drill: 'flick' };
-        let shotFeedback = { text: '', at: 0, good: false };
-
-        function canvasSize() {
-            const bounds = canvas.getBoundingClientRect();
-            const ratio = Math.min(window.devicePixelRatio || 1, 2);
-            const width = Math.max(1, Math.round(bounds.width * ratio));
-            const height = Math.max(1, Math.round(bounds.height * ratio));
-            if (canvas.width !== width || canvas.height !== height) {
-                canvas.width = width;
-                canvas.height = height;
-            }
-            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-            return { width: bounds.width, height: bounds.height };
-        }
-
-        function targetSize(width, height) {
-            const factor = drill === 'precision' ? 0.66 : 1;
-            return Math.max(36, Math.min(width, height) * 0.12 * factor);
-        }
-
-        function chooseTarget(now = performance.now()) {
-            const pad = 0.13;
-            target.x = pad + Math.random() * (1 - pad * 2);
-            target.y = 0.24 + Math.random() * 0.51;
-            target.bornAt = now;
-            target.spawnId++;
-            target.pulse = 0;
-            const direction = Math.random() < 0.5 ? -1 : 1;
-            const pace = drill === 'tracking' ? 0.3 : drill === 'precision' ? 0.11 : 0.24;
-            const multiplier = weaponSettings[weapon].speed;
-            target.vx = direction * pace * multiplier * (drill === 'tracking' ? 1 : 0.72 + Math.random() * 0.56);
-            target.vy = drill === 'tracking' ? 0 : (Math.random() - 0.5) * pace * multiplier * 0.35;
-        }
-
-        function targetScreenPosition(width, height) {
-            return { x: (target.x - camera.x) * width, y: (target.y - camera.y) * height };
-        }
-
-        function updateStatDisplay() {
-            document.getElementById('stat-hits').textContent = hits;
-            document.getElementById('stat-shots').textContent = shots;
-            document.getElementById('stat-accuracy').textContent = shots ? `${Math.round(hits / shots * 100)}%` : '--%';
-            const average = reactionTimes.length ? Math.round(reactionTimes.reduce((sum, value) => sum + value, 0) / reactionTimes.length) : null;
-            document.getElementById('stat-reaction').textContent = average ? `${average} ms` : '-- ms';
-        }
-
-        function updateWeaponReadout() {
-            const settings = weaponSettings[weapon];
-            const status = settings.infiniteAmmo ? '∞ ammo' : isReloading ? 'Reloading' : `${ammo}/${settings.ammo}`;
-            document.getElementById('weapon-readout').textContent = `${weaponNames[weapon]} · ${status}`;
-        }
-
-        function setAiming(nextState) {
-            isAiming = nextState;
-            document.getElementById('arena-crosshair').classList.toggle('is-aiming', isAiming);
-            const sniperScoped = playing && weapon === 'sniper' && isAiming;
-            document.getElementById('sniper-scope').hidden = !sniperScoped;
-            document.getElementById('arena-crosshair').hidden = sniperScoped;
-            document.getElementById('ads-button').setAttribute('aria-pressed', String(isAiming));
-        }
-
-        function setWeapon(nextWeapon) {
-            if (!weaponSettings[nextWeapon]) return;
-            weapon = nextWeapon;
-            ammo = weaponSettings[weapon].ammo;
-            isReloading = false;
-            setAiming(isAiming);
-            document.querySelectorAll('[data-weapon]').forEach(button => {
-                button.setAttribute('aria-pressed', String(button.dataset.weapon === weapon));
-            });
-            updateWeaponReadout();
-            if (playing) chooseTarget();
-        }
-
-        function setDrill(nextDrill) {
-            if (!drillNames[nextDrill]) return;
-            drill = nextDrill;
-            document.getElementById('drill-heading').textContent = `${drillNames[drill]} training`;
-            document.getElementById('drill-hint').textContent = drillDescriptions[drill];
-            document.getElementById('arena-mode').textContent = `${drillNames[drill]} / warm-up`;
-            document.querySelectorAll('[data-drill]').forEach(button => {
-                button.setAttribute('aria-pressed', String(button.dataset.drill === drill));
-            });
-            if (playing) chooseTarget();
-        }
-
-        function setDuration(nextDuration) {
-            duration = Number(nextDuration);
-            document.querySelectorAll('[data-duration]').forEach(button => {
-                button.setAttribute('aria-pressed', String(Number(button.dataset.duration) === duration));
-            });
-            if (!playing) document.getElementById('timer').textContent = duration;
-        }
-
-        function hitShapes(width, height) {
-            const size = targetSize(width, height);
-            const { x, y } = targetScreenPosition(width, height);
-            const scale = size / 100;
-            return [
-                { x: x - 16 * scale, y: y - 74 * scale, w: 32 * scale, h: 30 * scale },
-                { x: x - 24 * scale, y: y - 40 * scale, w: 48 * scale, h: 43 * scale },
-                { x: x - 37 * scale, y: y - 37 * scale, w: 12 * scale, h: 39 * scale },
-                { x: x + 25 * scale, y: y - 37 * scale, w: 12 * scale, h: 39 * scale },
-                { x: x - 22 * scale, y: y + 6 * scale, w: 17 * scale, h: 37 * scale },
-                { x: x + 5 * scale, y: y + 6 * scale, w: 17 * scale, h: 37 * scale }
-            ];
-        }
-
-        function updateTarget(now, delta) {
-            if (playing) {
-                const seconds = Math.min(delta / 1000, 0.04);
-                target.x += target.vx * seconds;
-                target.y += target.vy * seconds;
-                if ((target.x < 0.12 && target.vx < 0) || (target.x > 0.88 && target.vx > 0)) target.vx *= -1;
-                if ((target.y < 0.23 && target.vy < 0) || (target.y > 0.78 && target.vy > 0)) target.vy *= -1;
-                target.pulse = Math.min(1, target.pulse + delta / 150);
-            } else {
-                target.pulse = 0.8 + Math.sin(now / 450) * 0.12;
-            }
-        }
-
-        function drawArena(now, delta) {
-            const { width, height } = canvasSize();
-            if (!width || !height) return;
-            const gradient = ctx.createLinearGradient(0, 0, width, height);
-            gradient.addColorStop(0, '#303a32');
-            gradient.addColorStop(0.54, '#272e29');
-            gradient.addColorStop(1, '#1b211e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
-
-            const horizon = height * (0.47 + camera.y * 0.035);
-            const vanishingX = width * (0.5 - Math.sin(camera.x * 2.1) * 0.09);
-            ctx.fillStyle = '#1a201d';
-            ctx.fillRect(0, horizon, width, height - horizon);
-            ctx.strokeStyle = '#d4f47713';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let index = -8; index <= 8; index++) {
-                const bottomX = vanishingX + index * width * 0.13;
-                ctx.moveTo(vanishingX, horizon);
-                ctx.lineTo(bottomX, height);
-            }
-            for (let index = 1; index <= 8; index++) {
-                const progress = index / 8;
-                const y = horizon + Math.pow(progress, 1.8) * (height - horizon);
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-            }
-            ctx.stroke();
-            ctx.strokeStyle = '#d9dfd61b';
-            ctx.beginPath();
-            ctx.moveTo(0, horizon);
-            ctx.lineTo(width, horizon);
-            ctx.stroke();
-
-            const shapes = hitShapes(width, height);
-            const size = targetSize(width, height);
-            const { x, y } = targetScreenPosition(width, height);
-            const scale = size / 100;
-            ctx.save();
-            ctx.shadowColor = '#ff654c88';
-            ctx.shadowBlur = 20;
-            ctx.fillStyle = '#ff654c';
-            ctx.fillRect(shapes[0].x, shapes[0].y, shapes[0].w, shapes[0].h);
-            ctx.fillRect(shapes[1].x, shapes[1].y, shapes[1].w, shapes[1].h);
-            for (const limb of shapes.slice(2)) ctx.fillRect(limb.x, limb.y, limb.w, limb.h);
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = '#f1f1e9';
-            ctx.fillRect(x - 11 * scale, y - 64 * scale, 22 * scale, 2.5 * scale);
-            ctx.fillStyle = '#d4f477';
-            ctx.fillRect(x - 7 * scale, y - 32 * scale, 14 * scale, 4 * scale);
-            ctx.fillStyle = '#f1f1e9';
-            ctx.fillRect(x - 1.5 * scale, y - 33.5 * scale, 3 * scale, 7 * scale);
-            ctx.strokeStyle = '#ffffffaa';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x - 16 * scale, y - 74 * scale, 32 * scale, 30 * scale);
-            ctx.restore();
-
-            drawCrosshair(width, height);
-            drawWeapon(width, height, now);
-
-            if (now - shotFeedback.at < 420 && shotFeedback.text) {
-                ctx.globalAlpha = Math.max(0, 1 - (now - shotFeedback.at) / 420);
-                ctx.fillStyle = shotFeedback.good ? '#d4f477' : '#ff8a76';
-                ctx.font = '700 12px "DM Sans", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(shotFeedback.text, x, y - size * 0.95 - (now - shotFeedback.at) * 0.035);
-                ctx.globalAlpha = 1;
-            }
-        }
-
-        function drawCrosshair(width, height) {
-            const x = width / 2;
-            const y = height / 2;
-            ctx.strokeStyle = '#f1f1e9e8';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(x - 12, y); ctx.lineTo(x - 4, y);
-            ctx.moveTo(x + 4, y); ctx.lineTo(x + 12, y);
-            ctx.moveTo(x, y - 12); ctx.lineTo(x, y - 4);
-            ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 12);
-            ctx.stroke();
-            ctx.fillStyle = '#d4f477';
-            ctx.fillRect(x - 1, y - 1, 2, 2);
-        }
-
-        function drawWeapon(width, height, now) {
-            const scale = Math.max(0.9, Math.min(1.35, Math.min(width / 410, height / 280)));
-            const center = width * 0.64 + weaponSway.x;
-            const base = height + 12 + Math.sin(now / 240) * 2 + weaponSway.y - weaponKick;
-            const shotgun = weapon === 'shotgun';
-            const sniper = weapon === 'sniper';
-            const body = shotgun ? '#53594c' : sniper ? '#3b4549' : weapon === 'burst' ? '#465648' : '#4c5148';
-            ctx.save();
-            ctx.translate(center, base);
-            ctx.scale(scale, scale);
-            ctx.rotate(-0.08 + weaponSway.x / 900);
-            const barrelTop = sniper ? -244 : shotgun ? -205 : -190;
-            ctx.fillStyle = '#222925';
-            if (shotgun) {
-                ctx.fillRect(-76, barrelTop, 13, 98);
-                ctx.fillRect(-51, barrelTop, 13, 98);
-                ctx.fillStyle = '#a8ad9b';
-                ctx.fillRect(-76, barrelTop, 13, 4);
-                ctx.fillRect(-51, barrelTop, 13, 4);
-            } else {
-                ctx.fillRect(-72, barrelTop, sniper ? 17 : 23, 91);
-                ctx.fillStyle = '#90988a';
-                ctx.fillRect(-70, barrelTop, sniper ? 3 : 4, 84);
-                ctx.fillStyle = '#171c19';
-                ctx.fillRect(-75, barrelTop - 3, sniper ? 23 : 29, 7);
-            }
-            ctx.fillStyle = body;
-            ctx.beginPath();
-            ctx.moveTo(-68, -111);
-            ctx.lineTo(-53, -119);
-            ctx.lineTo(-43, -139);
-            ctx.lineTo(-20, -136);
-            ctx.lineTo(-13, -111);
-            ctx.lineTo(8, -99);
-            ctx.lineTo(26, -77);
-            ctx.lineTo(43, -20);
-            ctx.lineTo(62, 5);
-            ctx.lineTo(25, 12);
-            ctx.lineTo(8, -25);
-            ctx.lineTo(-17, -41);
-            ctx.lineTo(-31, -79);
-            ctx.lineTo(-63, -86);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#242a27';
-            ctx.beginPath();
-            ctx.moveTo(-16, -87);
-            ctx.lineTo(10, -79);
-            ctx.lineTo(19, -26);
-            ctx.lineTo(2, -20);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#858d7e';
-            ctx.fillRect(-62, -91, shotgun ? 54 : 39, 6);
-            ctx.fillStyle = '#292f2b';
-            ctx.fillRect(-37, -146, 32, 7);
-            ctx.fillStyle = '#b59e75';
-            ctx.beginPath();
-            ctx.ellipse(-22, -82, 14, 9, -0.15, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(24, -18, 14, 10, 0.45, 0, Math.PI * 2);
-            ctx.fill();
-            if (sniper) {
-                ctx.fillStyle = '#171c19';
-                ctx.fillRect(-56, -173, 43, 24);
-                ctx.fillStyle = '#657068';
-                ctx.fillRect(-49, -169, 29, 15);
-                ctx.fillStyle = '#171c19';
-                ctx.fillRect(-41, -149, 12, 10);
-            } else if (shotgun) {
-                ctx.fillStyle = '#303832';
-                ctx.fillRect(-67, -117, 52, 13);
-            } else {
-                ctx.fillStyle = '#171c19';
-                ctx.fillRect(-42, -151, 10, 12);
-                ctx.fillStyle = '#aeb49f';
-                ctx.fillRect(-39, -154, 4, 4);
-            }
-            ctx.restore();
-        }
-
-        function frame(now) {
-            const delta = lastFrameAt ? now - lastFrameAt : 16;
-            lastFrameAt = now;
-            updateTarget(now, delta);
-            if (window.rivalsThree) {
-                window.rivalsThree.sync({ targetX: target.x, targetY: target.y, targetSpawnId: target.spawnId, cameraX: camera.x, cameraY: camera.y, weapon, drill, isAiming, weaponSwayX: weaponSway.x, weaponSwayY: weaponSway.y, weaponKick, playing });
-                window.rivalsThree.render();
-            } else {
-                drawArena(now, delta);
-            }
-            const swayDecay = Math.pow(0.001, Math.min(delta, 50) / 1000);
-            weaponSway.x *= swayDecay;
-            weaponSway.y *= swayDecay;
-            weaponKick *= Math.pow(0.002, Math.min(delta, 50) / 1000);
-            if (playing) {
-                const remaining = Math.max(0, Math.ceil((roundEndsAt - now) / 1000));
-                document.getElementById('timer').textContent = remaining;
-                if (remaining <= 0) finishRound();
-            }
-            requestAnimationFrame(frame);
-        }
-
-        function startRound() {
-            shots = 0;
-            hits = 0;
-            reactionTimes = [];
-            ammo = weaponSettings[weapon].ammo;
-            isReloading = false;
-            updateWeaponReadout();
-            lastShotAt = 0;
-            stopFiring();
-            firePointerId = null;
-            camera.x = 0;
-            camera.y = 0;
-            setAiming(false);
-            lastPointer = null;
-            lookPointerId = null;
-            lastTouchAt = 0;
-            weaponKick = 0;
-            playing = true;
-            roundEndsAt = performance.now() + duration * 1000;
-            document.getElementById('timer').textContent = duration;
-            document.getElementById('arena-mode').textContent = `${drillNames[drill]} / live`;
-            document.getElementById('overlay-title').textContent = 'Round in progress';
-            overlay.hidden = true;
-            endButton.hidden = false;
-            canvas.classList.add('is-playing');
-            document.body.classList.add('is-playing');
-            document.getElementById('ads-button').hidden = false;
-            document.getElementById('fire-button').hidden = !(navigator.maxTouchPoints > 0 || window.matchMedia('(max-width: 700px)').matches);
-            updateStatDisplay();
-            chooseTarget();
-            if (navigator.maxTouchPoints === 0 && canvas.requestPointerLock) {
-                try {
-                    const lockRequest = canvas.requestPointerLock();
-                    if (lockRequest && typeof lockRequest.catch === 'function') lockRequest.catch(() => {});
-                } catch (error) {
-                    lastPointer = null;
-                }
-            }
-        }
-
-        function finishRound() {
-            if (!playing) return;
-            playing = false;
-            stopFiring();
-            isFiring = false;
-            isReloading = false;
-            canvas.classList.remove('is-playing');
-            document.body.classList.remove('is-playing');
-            setAiming(false);
-            document.getElementById('ads-button').hidden = true;
-            lastPointer = null;
-            if (document.pointerLockElement === canvas) document.exitPointerLock();
-            endButton.hidden = true;
-            document.getElementById('arena-mode').textContent = `${drillNames[drill]} / complete`;
-            updateStatDisplay();
-            coachRound();
-            document.getElementById('overlay-title').textContent = 'Round complete';
-            document.getElementById('overlay-copy').textContent = `${hits} target${hits === 1 ? '' : 's'} hit from ${shots} shot${shots === 1 ? '' : 's'}. Your coach has a next drill ready.`;
-            startButton.textContent = 'Run it back';
-            overlay.hidden = false;
-        }
-
-        function coachRound() {
-            const accuracy = shots ? hits / shots * 100 : 0;
-            const average = reactionTimes.length ? reactionTimes.reduce((sum, value) => sum + value, 0) / reactionTimes.length : Infinity;
-            let title;
-            let copy;
-            let next;
-
-            if (!shots) {
-                title = 'Get a few reps in';
-                copy = 'No shots were recorded this round. Start another round and click the target to build a useful baseline.';
-                next = { weapon, drill: 'precision' };
-            } else if (accuracy < 55) {
-                title = 'Slow the shot down';
-                copy = `You hit ${Math.round(accuracy)}% of your shots. Take a beat to settle on the target before firing; a larger target makes those clean clicks easier to build.`;
-                next = { weapon: 'ar', drill: 'precision' };
-            } else if (average > 850) {
-                title = 'Shorten your target pickup';
-                copy = `Your hits averaged ${Math.round(average)} ms after each target appeared. Try a faster-moving target and keep your crosshair near its path.`;
-                next = { weapon: 'ar', drill: 'tracking' };
-            } else if (accuracy >= 85 && average <= 480) {
-                title = 'Ready for a tighter window';
-                copy = `You're connecting quickly at ${Math.round(accuracy)}% accuracy. Shrink the target and practice precise first-shot placement.`;
-                next = { weapon: 'sniper', drill: 'precision' };
-            } else if (weapon === 'sniper' && accuracy < 75) {
-                title = 'Make each shot count';
-                copy = `Sniper accuracy was ${Math.round(accuracy)}%. Reset onto the target before clicking; the slower rifle gives you time to place each shot.`;
-                next = { weapon: 'sniper', drill: 'precision' };
-            } else {
-                title = 'Build a steadier follow-up';
-                copy = `You landed ${Math.round(accuracy)}% of shots with a ${Math.round(average)} ms average reaction. Track the target through its movement before your next shot.`;
-                next = { weapon: 'burst', drill: 'tracking' };
-            }
-
-            currentRecommendation = next;
-            document.getElementById('coach-title').textContent = title;
-            document.getElementById('coach-copy').textContent = copy;
-            document.getElementById('recommendation-label').textContent = 'Recommended next drill';
-            document.getElementById('recommendation-title').textContent = `${weaponNames[next.weapon]} / ${drillNames[next.drill]}`;
-            document.getElementById('recommendation-copy').textContent = `${duration} seconds · ${drillDescriptions[next.drill]}.`;
-            document.getElementById('apply-recommendation').hidden = false;
-        }
-
-        function reload() {
-            if (!playing || weaponSettings[weapon].infiniteAmmo || isReloading || ammo === weaponSettings[weapon].ammo) return;
-            isReloading = true;
-            updateWeaponReadout();
-            window.clearTimeout(reloadTimer);
-            reloadTimer = window.setTimeout(() => {
-                ammo = weaponSettings[weapon].ammo;
-                isReloading = false;
-                updateWeaponReadout();
-            }, weaponSettings[weapon].reload);
-            shotFeedback = { text: 'RELOADING', at: performance.now(), good: false };
-        }
-
-        document.addEventListener('pointermove', event => {
-            const bounds = canvas.getBoundingClientRect();
-            if (!playing) return;
-            if (event.pointerType === 'touch' && event.pointerId !== lookPointerId) return;
-            let movementX;
-            let movementY;
-            if (document.pointerLockElement === canvas) {
-                movementX = event.movementX;
-                movementY = event.movementY;
-            } else if (lastPointer) {
-                movementX = event.clientX - lastPointer.x;
-                movementY = event.clientY - lastPointer.y;
-            } else {
-                lastPointer = { x: event.clientX, y: event.clientY };
-                return;
-            }
-            const aimScale = aimSensitivity * (isAiming ? 0.45 : 1);
-            camera.x += movementX / bounds.width * 1.15 * aimScale;
-            camera.y = Math.max(-0.65, Math.min(0.65, camera.y + movementY / bounds.height * 0.9 * aimScale));
-            weaponSway.x = Math.max(-24, Math.min(24, weaponSway.x - movementX * 0.34));
-            weaponSway.y = Math.max(-14, Math.min(14, weaponSway.y - movementY * 0.24));
-            lastPointer = { x: event.clientX, y: event.clientY };
-        });
-        canvas.addEventListener('contextmenu', event => event.preventDefault());
-        function fireShot(event) {
-            if (!playing) return;
-            if (event.button === 2) {
-                event.preventDefault();
-                setAiming(true);
-                return;
-            }
-            if (event.button !== 0 || isReloading) return;
-            const now = performance.now();
-            const settings = weaponSettings[weapon];
-            if (now - lastShotAt < settings.delay) return;
-            lastShotAt = now;
-            shots++;
-            weaponKick = Math.min(22, weaponKick + (weapon === 'shotgun' ? 17 : weapon === 'sniper' ? 13 : 8));
-            if (!settings.infiniteAmmo && ammo > 0) ammo--;
-            else reload();
-            updateWeaponReadout();
-            if (!settings.infiniteAmmo && ammo === 0) window.setTimeout(reload, 180);
-            const bounds = canvas.getBoundingClientRect();
-            const pellets = settings.pellets || 1;
-            const spread = (settings.spread || 0) * Math.min(bounds.width, bounds.height);
-            const hitSlop = targetSize(bounds.width, bounds.height) * 0.18;
-            let hit = false;
-            if (window.rivalsThree) {
-                hit = window.rivalsThree.shoot(pellets, spread);
-            } else {
-                const centerX = bounds.width / 2;
-                const centerY = bounds.height / 2;
-                const shapes = hitShapes(bounds.width, bounds.height);
-                for (let pellet = 0; pellet < pellets && !hit; pellet++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const distance = Math.sqrt(Math.random()) * spread;
-                    const pointerX = centerX + Math.cos(angle) * distance;
-                    const pointerY = centerY + Math.sin(angle) * distance;
-                    hit = shapes.some(shape =>
-                        pointerX >= shape.x - hitSlop && pointerX <= shape.x + shape.w + hitSlop &&
-                        pointerY >= shape.y - hitSlop && pointerY <= shape.y + shape.h + hitSlop
-                    );
-                }
-            }
-            if (hit) {
-                hits++;
-                reactionTimes.push(now - target.bornAt);
-                shotFeedback = { text: 'HIT', at: now, good: true };
-                if (drill === 'tracking') target.bornAt = now;
-                else chooseTarget(now);
-            } else {
-                shotFeedback = { text: 'MISS', at: now, good: false };
-            }
-            updateStatDisplay();
-        }
-
-        function stopFiring() {
-            isFiring = false;
-            window.clearInterval(fireInterval);
-            fireInterval = 0;
-        }
-
-        function startFiring(event) {
-            if (!playing) return;
-            isFiring = true;
-            fireShot(event);
-            window.clearInterval(fireInterval);
-            fireInterval = window.setInterval(() => {
-                if (!playing || !isFiring) {
-                    stopFiring();
-                    return;
-                }
-                fireShot({ button: 0 });
-            }, 25);
-        }
-
-        canvas.addEventListener('mousedown', event => {
-            if (performance.now() - lastTouchAt < 600) return;
-            if (event.button === 0) startFiring(event);
-            else fireShot(event);
-        });
-        window.addEventListener('mouseup', event => {
-            if (event.button === 0) stopFiring();
-        });
-        window.addEventListener('blur', stopFiring);
-        canvas.addEventListener('pointerdown', event => {
-            if (event.pointerType === 'touch') {
-                event.preventDefault();
-                lastTouchAt = performance.now();
-                lookPointerId = event.pointerId;
-                lastPointer = { x: event.clientX, y: event.clientY };
-                return;
-            }
-            if (event.pointerType !== 'mouse') fireShot(event);
-        });
-        window.addEventListener('pointerup', event => {
-            if (event.pointerId === firePointerId) {
-                stopFiring();
-                firePointerId = null;
-            }
-            if (event.pointerType === 'touch' && event.pointerId === lookPointerId) {
-                lookPointerId = null;
-                lastPointer = null;
-            }
-            if (event.button === 2) setAiming(false);
-        });
-        window.addEventListener('pointercancel', event => {
-            if (event.pointerId === firePointerId) {
-                stopFiring();
-                firePointerId = null;
-            }
-            if (event.pointerId === lookPointerId) {
-                lookPointerId = null;
-                lastPointer = null;
-            }
-        });
-        const adsButton = document.getElementById('ads-button');
-        const fireButton = document.getElementById('fire-button');
-        let touchAdsToggle = false;
-        adsButton.addEventListener('pointerdown', event => {
-            event.preventDefault();
-            if (event.pointerType === 'touch') {
-                touchAdsToggle = true;
-                return;
-            }
-            adsButton.setPointerCapture(event.pointerId);
-            setAiming(true);
-        });
-        adsButton.addEventListener('pointerup', event => {
-            if (event.pointerType === 'touch') {
-                if (touchAdsToggle) setAiming(!isAiming);
-                touchAdsToggle = false;
-                return;
-            }
-            setAiming(false);
-        });
-        adsButton.addEventListener('pointercancel', () => { touchAdsToggle = false; setAiming(false); });
-        adsButton.addEventListener('lostpointercapture', () => setAiming(false));
-        fireButton.addEventListener('pointerdown', event => {
-            event.preventDefault();
-            if (event.pointerType === 'touch') lastTouchAt = performance.now();
-            firePointerId = event.pointerId;
-            startFiring({ button: 0 });
-        });
-
-        document.querySelectorAll('[data-weapon]').forEach(button => button.addEventListener('click', () => setWeapon(button.dataset.weapon)));
-        document.querySelectorAll('[data-drill]').forEach(button => button.addEventListener('click', () => setDrill(button.dataset.drill)));
-        document.querySelectorAll('[data-duration]').forEach(button => button.addEventListener('click', () => setDuration(button.dataset.duration)));
-        document.getElementById('aim-sensitivity').addEventListener('input', event => {
-            aimSensitivity = Number(event.currentTarget.value);
-            document.getElementById('sensitivity-value').textContent = `${aimSensitivity.toFixed(1)}x`;
-        });
-        startButton.addEventListener('click', startRound);
-        endButton.addEventListener('click', finishRound);
-        document.getElementById('apply-recommendation').addEventListener('click', () => {
-            setWeapon(currentRecommendation.weapon);
-            setDrill(currentRecommendation.drill);
-            overlay.hidden = true;
-            document.getElementById('recommendation-label').textContent = 'Drill selected';
-            startButton.textContent = 'Start recommended drill';
-        });
-        window.addEventListener('keydown', event => {
-            if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
-            if (event.key === '1') setWeapon('ar');
-            if (event.key === '2') setWeapon('sniper');
-            if (event.key === '3') setWeapon('burst');
-            if (event.key === '4') setWeapon('shotgun');
-            if (event.key.toLowerCase() === 'r') reload();
-            if (event.key === 'Escape' && document.pointerLockElement === canvas) document.exitPointerLock();
-        });
-        document.addEventListener('pointerlockchange', () => { lastPointer = null; });
-        window.addEventListener('resize', canvasSize);
-        setDrill(drill);
-        document.getElementById('timer').textContent = duration;
-        requestAnimationFrame(frame);
-    </script>
-    <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
-
-        const host = document.querySelector('.arena-frame');
-        const view = document.getElementById('arena-scene');
-        const renderer = new THREE.WebGLRenderer({ canvas: view, antialias: (window.devicePixelRatio || 1) <= 1.35, alpha: false });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.15;
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color('#66766a');
-        scene.fog = new THREE.Fog('#66766a', 24, 68);
-
-        const camera = new THREE.PerspectiveCamera(72, 1, 0.1, 100);
-        camera.position.set(0, 1.55, 0);
-        camera.rotation.order = 'YXZ';
-        scene.add(camera);
-
-        scene.add(new THREE.HemisphereLight(0xdce8d2, 0x252d29, 2.1));
-        const sun = new THREE.DirectionalLight(0xffe8c3, 2.6);
-        sun.position.set(-5, 11, 5);
-        scene.add(sun);
-        const fill = new THREE.PointLight(0x9dca98, 32, 40);
-        fill.position.set(0, 5, -16);
-        scene.add(fill);
-
-        const materials = {
-            floor: new THREE.MeshStandardMaterial({ color: '#29322e', roughness: 0.9 }),
-            wall: new THREE.MeshStandardMaterial({ color: '#414a43', roughness: 0.88 }),
-            trim: new THREE.MeshStandardMaterial({ color: '#788477', roughness: 0.65 }),
-            crate: new THREE.MeshStandardMaterial({ color: '#4a5549', roughness: 0.82 }),
-            target: new THREE.MeshStandardMaterial({ color: '#f25240', roughness: 0.68 }),
-            targetLight: new THREE.MeshStandardMaterial({ color: '#f2f0dc', emissive: '#81775c', roughness: 0.5 }),
-            targetMark: new THREE.MeshStandardMaterial({ color: '#d4f477', emissive: '#43591b', roughness: 0.55 })
-        };
-
-        function addBox(parent, size, position, material, rotation = [0, 0, 0]) {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
-            mesh.position.set(...position);
-            mesh.rotation.set(...rotation);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            parent.add(mesh);
-            return mesh;
-        }
-
-        addBox(scene, [160, 0.22, 130], [-0, -2, -38], materials.floor);
-        const grid = new THREE.GridHelper(100, 50, 0x9cb184, 0x718276);
-        grid.position.set(0, -1.87, -30);
-        grid.material.transparent = true;
-        grid.material.opacity = 0.38;
-        scene.add(grid);
-
-        for (const side of [-1, 1]) {
-            addBox(scene, [0.45, 9, 62], [side * 11, 2.4, -30], materials.wall);
-            addBox(scene, [0.55, 0.32, 62], [side * 10.72, 5.9, -30], materials.trim);
-            for (let index = 0; index < 5; index++) {
-                const depth = -8 - index * 10;
-                addBox(scene, [1.2, 2.1 + (index % 2) * 0.6, 1.2], [side * (8.8 - index * 0.2), -0.82, depth], materials.crate);
-                addBox(scene, [0.11, 0.8, 0.09], [side * 10.45, 2.1, depth], materials.targetMark);
-            }
-        }
-
-        for (let index = 0; index < 7; index++) {
-            const depth = -7 - index * 7;
-            addBox(scene, [2.3, 0.18, 0.16], [0, 5.2, depth], materials.trim);
-            const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.34), new THREE.MeshStandardMaterial({ color: '#e0e5ce', emissive: '#798e5f', emissiveIntensity: 0.8 }));
-            lamp.position.set(0, 5.08, depth);
-            scene.add(lamp);
-        }
-
-        const targetRoot = new THREE.Group();
-        scene.add(targetRoot);
-        const avatarRoot = new THREE.Group();
-        targetRoot.add(avatarRoot);
-        const hitbox = new THREE.Mesh(
-            new THREE.BoxGeometry(1.5, 2.9, 0.85),
-            new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, colorWrite: false, depthWrite: false })
-        );
-        hitbox.position.y = 1.4;
-        targetRoot.add(hitbox);
-        addBox(avatarRoot, [0.82, 0.82, 0.72], [0, 2.48, 0], materials.target);
-        addBox(avatarRoot, [1.02, 1.18, 0.52], [0, 1.48, 0], materials.target);
-        addBox(avatarRoot, [0.95, 0.4, 0.54], [0, 0.68, 0], materials.target);
-        addBox(avatarRoot, [0.35, 1.08, 0.4], [-0.67, 1.48, 0], materials.target, [0, 0, -0.04]);
-        addBox(avatarRoot, [0.35, 1.08, 0.4], [0.67, 1.48, 0], materials.target, [0, 0, 0.04]);
-        addBox(avatarRoot, [0.4, 1.12, 0.44], [-0.25, 0.04, 0], materials.target);
-        addBox(avatarRoot, [0.4, 1.12, 0.44], [0.25, 0.04, 0], materials.target);
-        addBox(avatarRoot, [0.48, 0.11, 0.08], [0, 2.6, 0.38], materials.targetLight);
-        addBox(avatarRoot, [0.12, 0.1, 0.06], [0, 1.58, 0.29], materials.targetMark);
-        addBox(avatarRoot, [0.12, 0.1, 0.06], [0, 1.35, 0.29], materials.targetLight);
-
-        const trackingTarget = new THREE.Group();
-        trackingTarget.position.y = 1.45;
-        const ovalMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 20), materials.target);
-        ovalMesh.scale.set(0.62, 1.08, 0.32);
-        trackingTarget.add(ovalMesh);
-        const ovalRing = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.045, 8, 36), materials.targetLight);
-        ovalRing.scale.set(0.95, 1.6, 1);
-        ovalRing.position.z = 0.28;
-        trackingTarget.add(ovalRing);
-        const ovalBullseye = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 8, 32), materials.targetMark);
-        ovalBullseye.position.z = 0.34;
-        trackingTarget.add(ovalBullseye);
-        trackingTarget.visible = false;
-        targetRoot.add(trackingTarget);
-        let activeHitTarget = hitbox;
-
-        const weaponRig = new THREE.Group();
-        camera.add(weaponRig);
-        weaponRig.position.set(0.36, -0.34, -0.82);
-        let selectedWeapon = '';
-
-        function makeGun(kind) {
-            const gun = new THREE.Group();
-            const dark = new THREE.MeshStandardMaterial({ color: '#202724', metalness: 0.58, roughness: 0.4 });
-            const receiver = new THREE.MeshStandardMaterial({ color: kind === 'shotgun' ? '#596247' : kind === 'sniper' ? '#46545a' : '#475444', metalness: 0.28, roughness: 0.55 });
-            const grip = new THREE.MeshStandardMaterial({ color: '#292d27', roughness: 0.92 });
-            const glove = new THREE.MeshStandardMaterial({ color: '#ad8a60', roughness: 0.92 });
-            addBox(gun, [0.23, 0.16, 0.54], [0, -0.02, -0.12], receiver);
-            addBox(gun, [0.17, 0.13, 0.34], [0, -0.045, 0.25], grip);
-            addBox(gun, [0.12, 0.25, 0.16], [0.03, -0.19, -0.01], grip, [0.18, 0, -0.12]);
-            addBox(gun, [0.11, 0.11, 0.32], [-0.015, -0.15, -0.34], receiver);
-            addBox(gun, [0.13, 0.12, 0.2], [0.03, -0.29, -0.18], glove, [0.1, 0, -0.12]);
-            addBox(gun, [0.12, 0.11, 0.23], [0.18, -0.25, 0.05], glove, [0.12, 0, -0.2]);
-
-            const barrelLength = kind === 'sniper' ? 0.92 : kind === 'shotgun' ? 0.68 : 0.58;
-            const barrelGeometry = new THREE.CylinderGeometry(0.035, 0.047, barrelLength, 12);
-            const barrelCount = kind === 'shotgun' ? 2 : 1;
-            for (let index = 0; index < barrelCount; index++) {
-                const barrel = new THREE.Mesh(barrelGeometry, dark);
-                barrel.rotation.x = Math.PI / 2;
-                barrel.position.set(kind === 'shotgun' ? (index - 0.5) * 0.105 : 0, 0.035, -0.43 - barrelLength * 0.42);
-                gun.add(barrel);
-            }
-            if (kind === 'shotgun') {
-                addBox(gun, [0.26, 0.12, 0.28], [0, -0.11, -0.48], receiver);
-                addBox(gun, [0.08, 0.1, 0.18], [-0.1, -0.13, 0.07], grip);
-            } else if (kind === 'sniper') {
-                addBox(gun, [0.13, 0.2, 0.38], [0, 0.18, -0.16], dark);
-                addBox(gun, [0.2, 0.15, 0.16], [0, 0.18, -0.16], receiver);
-                addBox(gun, [0.1, 0.1, 0.22], [0, 0.06, -0.16], dark);
-            } else {
-                addBox(gun, [0.16, 0.12, 0.18], [0, 0.14, -0.12], dark);
-                addBox(gun, [0.07, 0.05, 0.07], [0, 0.22, -0.1], materials.targetMark);
-                if (kind === 'burst') addBox(gun, [0.19, 0.16, 0.18], [0, -0.18, -0.15], grip);
-            }
-            return gun;
-        }
-
-        const raycaster = new THREE.Raycaster();
-        const aimPoint = new THREE.Vector2();
-        let activeSpawnId = -1;
-        let targetDepth = 15;
-        let viewWidth = 1;
-        let viewHeight = 1;
-
-        function resizeView() {
-            const bounds = host.getBoundingClientRect();
-            viewWidth = Math.max(1, bounds.width);
-            viewHeight = Math.max(1, bounds.height);
-            renderer.setSize(viewWidth, viewHeight, false);
-            camera.aspect = viewWidth / viewHeight;
-            camera.updateProjectionMatrix();
-        }
-
-        new ResizeObserver(resizeView).observe(host);
-        window.addEventListener('resize', resizeView);
-        resizeView();
-
-        function sync(state) {
-            if (state.targetSpawnId !== activeSpawnId) {
-                activeSpawnId = state.targetSpawnId;
-                targetDepth = 12 + Math.random() * 7;
-            }
-            targetRoot.position.set((state.targetX - 0.5) * 18, (0.5 - state.targetY) * 5 + 0.1, -targetDepth);
-            targetRoot.scale.setScalar(state.drill === 'precision' ? 0.7 : 1);
-            const tracking = state.drill === 'tracking';
-            avatarRoot.visible = !tracking;
-            hitbox.visible = !tracking;
-            trackingTarget.visible = tracking;
-            activeHitTarget = tracking ? trackingTarget : hitbox;
-            targetRoot.rotation.y = Math.sin(performance.now() * 0.0014) * 0.035;
-            camera.rotation.y = -state.cameraX * 1.15;
-            camera.rotation.x = -state.cameraY * 0.9;
-            const targetFov = state.isAiming ? state.weapon === 'sniper' ? 28 : 48 : 72;
-            if (Math.abs(targetFov - camera.fov) > 0.05) {
-                camera.fov += (targetFov - camera.fov) * 0.18;
-                camera.updateProjectionMatrix();
-            } else if (camera.fov !== targetFov) {
-                camera.fov = targetFov;
-                camera.updateProjectionMatrix();
-            }
-            if (state.weapon !== selectedWeapon) {
-                while (weaponRig.children.length) weaponRig.remove(weaponRig.children[0]);
-                weaponRig.add(makeGun(state.weapon));
-                selectedWeapon = state.weapon;
-            }
-            weaponRig.position.x = 0.36 + state.weaponSwayX / 300;
-            weaponRig.position.y = -0.34 + state.weaponSwayY / 260;
-            weaponRig.rotation.x = state.weaponKick * 0.007;
-            weaponRig.rotation.z = -state.weaponSwayX / 340;
-            weaponRig.visible = true;
-        }
-
-        function shoot(pellets, spread) {
-            scene.updateMatrixWorld(true);
-            camera.updateMatrixWorld(true);
-            const jitter = spread / Math.max(1, Math.min(viewWidth, viewHeight));
-            for (let pellet = 0; pellet < pellets; pellet++) {
-                aimPoint.set((Math.random() - 0.5) * 2 * jitter, (Math.random() - 0.5) * 2 * jitter);
-                raycaster.setFromCamera(aimPoint, camera);
-                if (raycaster.intersectObject(activeHitTarget, true).length) return true;
-            }
-            return false;
-        }
-
-        function projectTarget() {
-            scene.updateMatrixWorld(true);
-            camera.updateMatrixWorld(true);
-            const point = targetRoot.localToWorld(new THREE.Vector3(0, 1.4, 0)).project(camera);
-            return { x: (point.x + 1) * viewWidth / 2, y: (1 - point.y) * viewHeight / 2, scale: targetRoot.scale.x, visible: point.z > -1 && point.z < 1 };
-        }
-
-        function render() {
-            renderer.render(scene, camera);
-        }
-
-        window.rivalsThree = { sync, shoot, projectTarget, render };
-    </script>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#171a18">
+<title>Rivals Aim Lab 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{box-sizing:border-box;color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--ink:#f1f1e9;--mu:#919892;--line:#3a403b;--red:#ff654c;--lime:#d4f477;--page:#171a18;font-family:'DM Sans',system-ui,sans-serif}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);background:radial-gradient(ellipse at 34% 0,#30352d 0,#202420 28%,var(--page) 68%) var(--page);user-select:none;-webkit-user-select:none}
+button{font:inherit}h1,h2,h3,p{margin-top:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:0 4vw;border-bottom:1px solid #ffffff12}
+.brand{display:flex;align-items:center;gap:12px;font:700 20px 'Barlow Condensed',sans-serif;text-transform:uppercase}
+.brand i{width:34px;height:34px;display:grid;place-items:center;color:#181a17;background:var(--lime);clip-path:polygon(0 0,100% 0,100% 76%,67% 100%,0 100%);font-style:normal;font-weight:800;font-size:21px}.brand span{color:var(--lime)}
+.tag{color:var(--mu);font-size:12px;margin-right:12px}
+.sbtn{border:1px solid #ffffff26;background:transparent;color:var(--ink);padding:9px 13px;cursor:pointer;font-size:12px;font-weight:700}.sbtn:hover{border-color:var(--lime);color:var(--lime)}
+.wrap{max-width:1500px;margin:0 auto;padding:22px 4vw 34px;display:grid;grid-template-columns:minmax(0,1fr) 326px;gap:24px}
+.arena{min-width:0}
+.ph{display:flex;align-items:end;justify-content:space-between;margin-bottom:14px}
+.eb{margin:0 0 4px;color:var(--lime);font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}
+h1{margin:0;font:700 29px/1 'Barlow Condensed',sans-serif}
+.clk{color:var(--mu);font-size:12px}.clk strong{color:var(--ink);font:700 21px 'Barlow Condensed',sans-serif;margin-left:6px}
+.af{position:relative;overflow:hidden;height:min(62vh,640px);min-height:360px;background:#242a26;border:1px solid #ffffff18}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block;cursor:crosshair}
+#hud{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;justify-content:space-between;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;pointer-events:none;text-shadow:0 1px 4px #000}
+#ch{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:2}
+#ch i{position:absolute;background:#f1f1e9;box-shadow:0 0 3px #000}
+#ch .a{left:-1px;top:-14px;width:2px;height:8px}#ch .b{left:-1px;top:6px;width:2px;height:8px}#ch .c{top:-1px;left:-14px;width:8px;height:2px}#ch .d{top:-1px;left:6px;width:8px;height:2px}
+#hm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin-top:-44px;font-weight:800;pointer-events:none;opacity:0;transition:opacity .25s;text-shadow:0 1px 3px #000;z-index:2}
+#sc{position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(circle closest-side at center,transparent 92%,#000 93%)}
+#sc:after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,.6)}
+#sc:before{content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(255,255,255,.6)}
+.rt{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:2}
+.rt:before,.rt:after{content:"";position:absolute}
+.rt.dot:after{left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:#ff3b4a;box-shadow:0 0 10px 3px rgba(255,59,74,.7)}
+.rt.ring:after{left:-28px;top:-28px;width:54px;height:54px;border:2px solid #ff3b4a;border-radius:50%;box-shadow:0 0 6px rgba(255,59,74,.6)}
+.rt.ring:before{left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:#ff3b4a}
+.rt.iron:after{left:-1px;top:-16px;width:2px;height:32px;background:#fff;box-shadow:0 0 2px #000}
+.rt.iron:before{left:-9px;top:-9px;width:14px;height:14px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 2px #000}
+#fire,#ads{position:absolute;bottom:16px;z-index:3;height:60px;font-weight:800;letter-spacing:.6px;cursor:pointer;touch-action:none}
+#fire{right:16px;width:88px;border:1px solid #ff8a76;color:#fff5ee;background:#b83f32dd}
+#ads{right:116px;width:70px;border:1px solid #f1f1e988;color:var(--ink);background:#151b18cc}
+.ov{position:absolute;inset:0;z-index:4;display:grid;place-items:center;padding:20px;background:#14171380}
+.card{width:min(390px,100%);padding:24px;border-top:2px solid var(--lime);background:#1d211eee;box-shadow:0 18px 60px #0006;text-align:center}
+.card h2{margin:0 0 8px;font:700 30px/1 'Barlow Condensed',sans-serif;text-transform:uppercase}
+.card p{color:#b6bcb5;font-size:12px;line-height:1.55;margin:0 0 16px}
+.go{min-height:43px;width:100%;border:0;background:var(--lime);color:#1c2118;font-weight:800;font-size:12px;text-transform:uppercase;cursor:pointer}.go:hover{background:#e2ff97}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px}.res div{background:#282d29;padding:9px;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--mu)}.res b{display:block;color:var(--ink);font:600 24px 'Barlow Condensed',sans-serif}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:12px;border:1px solid #ffffff18;background:#1d211e}
+.stats div{padding:11px 14px;border-right:1px solid #ffffff16}.stats div:last-child{border:0}
+.stats span{display:block;color:var(--mu);font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}.stats b{display:block;margin-top:3px;font:600 22px 'Barlow Condensed',sans-serif}
+.sec{padding:0 0 18px;margin-bottom:16px;border-bottom:1px solid #ffffff18}
+.sh{display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 10px}.sh:first-child{margin-top:0}
+.sh h2{margin:0;font:700 16px 'Barlow Condensed',sans-serif;text-transform:uppercase}.sh small{color:var(--mu);font-size:10px}
+.option-list{display:grid;gap:7px}
+.w{border:1px solid var(--line);background:#1d211e;color:var(--ink);padding:9px 12px;text-align:left;cursor:pointer}.w:hover{border-color:#8b9787}
+.w.on{border-color:var(--lime);background:#293026;box-shadow:inset 3px 0 var(--lime)}
+.w b{display:block;font-size:12px}.w small{display:block;margin-top:2px;color:var(--mu);font-size:10px}
+.sl{display:block;margin-top:12px;color:var(--mu);font-size:11px}.sl b{color:var(--lime)}.sl input{width:100%;accent-color:var(--lime)}
+.coach h3{margin:8px 0 6px;font:700 22px/1.05 'Barlow Condensed',sans-serif;text-transform:uppercase}.coach p{color:#abb2ab;font-size:11px;line-height:1.55}
+.note{color:#798179;font-size:10px;line-height:1.5}
+.hide{display:none!important}
+@media(max-width:820px){.wrap{display:flex;flex-direction:column;gap:16px;padding:16px 12px 28px}.rail{display:contents}.setup{order:1;margin:0}.arena{order:2}.coach{order:3}.option-list{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.stats div:nth-child(2){border-right:0}.stats div:nth-child(-n+2){border-bottom:1px solid #ffffff16}.af{height:56vh;min-height:340px}.tag{display:none}}
+</style></head><body>
+<header class="top"><div class="brand"><i>R</i><div>Rivals <span>Aim Lab</span></div></div><div><span class="tag">Best scores saved on this device</span><button class="sbtn hide" id="endS" type="button">End session</button></div></header>
+<main class="wrap">
+<section class="arena">
+<div class="ph"><div><p class="eb">Practice range / 3D</p><h1 id="dh">Grid Shot training</h1></div><div class="clk">TIME <strong id="hT">30</strong></div></div>
+<div class="af"><canvas id="cv"></canvas>
+<div id="hud" class="hide"><span id="hS"></span><span id="hA"></span><span id="hM"></span></div>
+<div id="sc" class="hide"></div><div id="ch" class="hide"><i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i></div><div id="hm"></div><div id="rt" class="rt hide"></div>
+<button id="ads" class="hide" type="button">AIM</button><button id="fire" class="hide" type="button">FIRE</button>
+<div class="ov" id="menu"><div class="card"><p class="eb">Your range is ready</p><h2>Lock in your aim</h2><p>Pick an exercise and weapon, then take a 30-second round. PC: click to lock the mouse, hold right-click to aim. Mobile: drag to look, hold FIRE, tap AIM.</p><button class="go" id="start" type="button">Start practice</button><p id="best" style="margin:12px 0 0"></p></div></div>
+<div class="ov hide" id="end"><div class="card"><p class="eb">Round complete</p><h2>Time!</h2><div class="res"><div>Score<b id="rS"></b></div><div>Accuracy<b id="rA"></b></div><div>Hits<b id="rK"></b></div><div>Bullseyes<b id="rH"></b></div></div><p id="rB"></p><button class="go" id="again" type="button">Run it back</button><p style="margin:12px 0 0"><a href="#" id="mn" style="color:var(--mu)">Change exercise / weapon</a></p></div></div>
+</div>
+<div class="stats"><div><span>Score</span><b id="stS">0</b></div><div><span>Accuracy</span><b id="stA">--%</b></div><div><span id="stHl">Targets hit</span><b id="stH">0</b></div><div><span>Best</span><b id="stB">0</b></div></div>
+</section>
+<aside class="rail">
+<div class="sec setup"><div class="sh"><h2>Choose exercise</h2><small>4 drills</small></div><div class="option-list" id="ms"></div>
+<div class="sh"><h2>Choose weapon</h2><small>with sights</small></div><div class="option-list" id="ws"></div>
+<label class="sl">Sensitivity <input type="range" id="sens" min="3" max="30" value="12"></label>
+<label class="sl" id="spl">Tracking ball speed: <b id="spv">8</b> <input type="range" id="sp" min="2" max="20" value="8"></label></div>
+<div class="sec coach"><p class="eb">Coach / on-device</p><h3 id="cT">Your next rep starts here</h3><p id="cC">Finish one round to get a tip based on your accuracy.</p><p class="note">Tips are generated locally from your round. Fan-made, not affiliated with Rivals or Roblox; weapon stats are simplified.</p></div>
+</aside></main>
+<script>
+const $=id=>document.getElementById(id);
+const MODES={grid:{n:"Grid Shot",d:"3 lit targets, clear fast"},flick:{n:"Flicking",d:"Snap to targets all around"},track:{n:"Tracking",d:"Hold fire, stay on target"},prec:{n:"Precision",d:"Tiny targets, center = more"}};
+const W={
+ar:{n:"Assault Rifle",d:"Full auto",rate:95,auto:1,spread:10,mag:30,rel:1400,mult:1,ads:{fov:58,spr:.5,sens:.8,rt:"dot"}},
+burst:{n:"Burst Rifle",d:"3-round burst",rate:420,burst:3,spread:4,mag:30,rel:1300,mult:1.2,ads:{fov:45,spr:.4,sens:.65,rt:"ring"}},
+sniper:{n:"Sniper",d:"One shot, scope",rate:1200,spread:8,mag:1,rel:0,scope:1,mult:2,ads:{fov:18,spr:0,sens:.45,rt:"scope"}},
+rev:{n:"Revolver",d:"6 rounds, heavy",rate:380,spread:2,mag:6,rel:1100,mult:1.5,ads:{fov:60,spr:.5,sens:.85,rt:"iron"}}};
+let mk="grid",wk="ar",sens=12;
+try{mk=localStorage.getItem("rv4_m")||mk;wk=localStorage.getItem("rv4_w")||wk;sens=+localStorage.getItem("rv4_s")||12}catch(e){}
+if(!MODES[mk])mk="grid";if(!W[wk])wk="ar";$("sens").value=sens;
+const sv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const bestOf=()=>{try{return+localStorage.getItem("rv4_b_"+mk+wk+(mk==="track"?"s"+spd:""))||0}catch(e){return 0}};
+function btns(el,o,get,set){Object.keys(o).forEach(k=>{const b=document.createElement("button");b.className="w";b.innerHTML=`<b>${o[k].n}</b><small>${o[k].d}</small>`;b.dataset.k=k;b.onclick=()=>set(k);el.appendChild(b)})}
+btns($("ms"),MODES,0,k=>{mk=k;sv("rv4_m",k);sel()});btns($("ws"),W,0,k=>{wk=k;sv("rv4_w",k);sel()});
+function sel(){[...$("ms").children].forEach(b=>b.classList.toggle("on",b.dataset.k==mk));[...$("ws").children].forEach(b=>b.classList.toggle("on",b.dataset.k==wk));$("best").textContent="Best: "+bestOf();$("spl").classList.toggle("hide",mk!=="track");$("dh").textContent=MODES[mk].n+" training";$("stHl").textContent=mk==="track"?"Time on target":"Targets hit";buildGun()}
+$("sens").oninput=e=>{sens=+e.target.value;sv("rv4_s",sens)};
+
+// scene
+const cv=$("cv"),R=new THREE.WebGLRenderer({canvas:cv,antialias:true});R.setPixelRatio(Math.min(devicePixelRatio||1,2));
+const S=new THREE.Scene();S.background=new THREE.Color(0x10141f);S.fog=new THREE.Fog(0x10141f,40,120);
+const cam=new THREE.PerspectiveCamera(75,1,.05,200);cam.position.set(0,1.6,0);cam.rotation.order="YXZ";S.add(cam);
+S.add(new THREE.AmbientLight(0xffffff,.7));const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(10,30,10);S.add(dl);
+const fl=new THREE.Mesh(new THREE.PlaneGeometry(240,240),new THREE.MeshLambertMaterial({color:0x1a2236}));fl.rotation.x=-Math.PI/2;S.add(fl);S.add(new THREE.GridHelper(240,120,0x2c3856,0x1f2840));
+// ring of pillars so flicks have visual reference
+for(let i=0;i<24;i++){const a=i/24*6.283,p=new THREE.Mesh(new THREE.BoxGeometry(2,5+(i%4)*3,2),new THREE.MeshLambertMaterial({color:i%2?0x2b3550:0x343f60}));p.position.set(Math.sin(a)*50,p.geometry.parameters.height/2,-Math.cos(a)*50);S.add(p)}
+const hostEl=document.querySelector(".af");function rs(){const w=hostEl.clientWidth||1,h=hostEl.clientHeight||1;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}new ResizeObserver(rs).observe(hostEl);rs();
+
+// weapon model (viewmodel)
+const gun=new THREE.Group();cam.add(gun);const flash=new THREE.Mesh(new THREE.SphereGeometry(.05,8,8),new THREE.MeshBasicMaterial({color:0xffe27a}));
+const gm=c=>new THREE.MeshLambertMaterial({color:c,fog:false}),DK=0x2a3042,MT=0x5b6684,AC=0xff4d5e;
+function bx(w,h,d,c,x,y,z,rx){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),gm(c));m.position.set(x,y,z);if(rx)m.rotation.x=rx;gun.add(m)}
+function cy(r,l,c,x,y,z){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,14),gm(c));m.rotation.x=Math.PI/2;m.position.set(x,y,z);gun.add(m)}
+let gz=-.5;
+function buildGun(){while(gun.children.length)gun.remove(gun.children[0]);let mz=-.5;
+if(wk==="ar"){bx(.06,.08,.42,DK,0,0,-.1);cy(.014,.28,MT,0,.015,-.43);bx(.045,.12,.07,MT,0,-.09,-.02,.2);bx(.05,.09,.2,DK,0,-.01,.2);bx(.03,.03,.14,AC,0,.055,-.1);bx(.04,.1,.05,DK,0,-.08,.1,-.3);mz=-.58}
+else if(wk==="burst"){bx(.06,.09,.34,DK,0,0,-.08);for(const x of[-.02,0,.02])cy(.009,.26,MT,x,x?.01:.03,-.36);bx(.05,.1,.06,MT,0,-.09,-.05,.15);bx(.045,.08,.14,DK,0,-.01,.15);bx(.03,.025,.12,AC,0,.055,-.1);mz=-.5}
+else if(wk==="sniper"){bx(.05,.08,.5,DK,0,0,-.05);cy(.012,.5,MT,0,.015,-.55);cy(.03,.26,0x1b1f2c,0,.095,-.12);cy(.036,.04,AC,0,.095,-.25);bx(.05,.1,.22,DK,0,-.01,.3);bx(.04,.08,.05,DK,0,-.08,.08,-.3);mz=-.82}
+else{bx(.04,.08,.18,DK,0,0,-.05);cy(.045,.1,MT,0,.015,-.08);cy(.012,.28,MT,0,.04,-.28);bx(.04,.12,.06,DK,0,-.1,.05,-.35);bx(.012,.02,.02,AC,0,.075,-.4);mz=-.44}
+flash.position.set(0,.02,mz);gun.add(flash);gun.position.set(.2,-.2,-.35);gz=-.35}
+let rk=0,flT=0;function kickFX(){rk=.045;flT=.045}
+
+// targets
+const mR=new THREE.MeshLambertMaterial({color:0xff4d5e,emissive:0x330a10}),mG=new THREE.MeshLambertMaterial({color:0x4dff88,emissive:0x0a3318});
+let T=[],M=[];
+function add(x,y,z,r,life){const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),mR);m.position.set(x,y,z);const o={m,r,born:performance.now(),life,tx:x,ty:y,nt:0};m.userData.o=o;S.add(m);T.push(o);M.push(m);return o}
+function rm(o){S.remove(o.m);o.m.geometry.dispose();T=T.filter(t=>t!==o);M=M.filter(m=>m!==o.m)}
+function spawn(){
+if(mk==="grid"){const used=T.map(o=>o.cell);let i;do{i=Math.floor(Math.random()*9)}while(used.includes(i));const o=add((i%3-1)*2.2,1.6+(1-Math.floor(i/3))*2.2,-18,.5,0);o.cell=i}
+else if(mk==="flick"){const a=(Math.random()*2-1)*1.5,e=(Math.random()-.4)*.5,d=18;add(Math.sin(a)*d,1.6+Math.sin(e)*d,-Math.cos(a)*d,.5,2.5)}
+else if(mk==="track"){const o=add(0,2.5,-20,.65,0);o.h=Math.random()*6.283;o.th=o.h}
+else{const d=25+Math.random()*15;add((Math.random()*2-1)*d*.4,1.2+Math.random()*4,-d,.13,2.2)}}
+function fill(){const n=mk==="grid"?3:1;while(T.length<n)spawn()}
+
+// state
+let run=false,score=0,shots=0,hits=0,bulls=0,tl=30,ammo=0,nextOk=0,relUntil=0,hold=false,yaw=0,pitch=0,last=0,hmT=0,hT=0,onT=0,nfx=0,ads=false,adsT=0,spd=8;
+try{spd=+localStorage.getItem("rv4_sp")||8}catch(e){}$("sp").value=spd;$("spv").textContent=spd;$("sp").oninput=e=>{spd=+e.target.value;$("spv").textContent=spd;sv("rv4_sp",spd);sel()};
+const touch=matchMedia("(pointer:coarse)").matches,ray=new THREE.Raycaster();
+function begin(){const g=W[wk];T.slice().forEach(rm);score=shots=hits=bulls=hT=onT=0;tl=30;ammo=g.mag;nextOk=relUntil=0;yaw=pitch=0;
+ads=false;adsT=0;cam.fov=75;cam.updateProjectionMatrix();gun.visible=true;$("ads").style.background="";$("rt").className="rt "+g.ads.rt;run=true;
+["menu","end"].forEach(i=>$(i).classList.add("hide"));["hud","ch","endS"].forEach(i=>$(i).classList.remove("hide"));
+if(touch){$("fire").classList.remove("hide");$("ads").classList.remove("hide")}else try{cv.requestPointerLock()}catch(e){}
+fill();last=performance.now();requestAnimationFrame(loop)}
+function msg(t,c){const e=$("hm");e.textContent=t;e.style.color=c;e.style.opacity=1;clearTimeout(hmT);hmT=setTimeout(()=>e.style.opacity=0,300)}
+function shoot(i){const g=W[wk],s=(g.spread*(1+i*.5)+(hold&&g.auto?7:0))/(cv.clientHeight/2)*(cam.fov/75)*(1+(g.ads.spr-1)*adsT),a=Math.random()*6.283,r=Math.random()*s;shots++;kickFX();
+ray.setFromCamera(new THREE.Vector2(Math.cos(a)*r*cv.clientHeight/cv.clientWidth,Math.sin(a)*r),cam);
+const h=ray.intersectObjects(M)[0];pitch=Math.min(1.4,pitch+.003*(cam.fov/75));
+if(!h)return;const o=h.object.userData.o,d=h.point.distanceTo(o.m.position)/o.r,b=d<.4;hits++;if(b)bulls++;
+let p=mk==="grid"?50:mk==="flick"?100+Math.max(0,2-(performance.now()-o.born)/1000)*50:20+80*(1-d);
+score+=Math.round(p*g.mult);msg(b?"BULLSEYE":"HIT",b?"#ffd34d":"#ff4d5e");rm(o);fill()}
+function fire(){const g=W[wk],n=performance.now();if(!run||mk==="track"||n<nextOk||n<relUntil)return;
+if(g.burst){const c=Math.min(g.burst,ammo);for(let i=0;i<c;i++)setTimeout(()=>run&&shoot(i),i*65);ammo-=c}else{shoot(0);ammo--}
+nextOk=n+g.rate;if(ammo<=0){relUntil=n+g.rel;ammo=g.mag}}
+function look(dx,dy){const k=sens*.00018*(cam.fov/75)*(1+(W[wk].ads.sens-1)*adsT);yaw-=dx*k;pitch=Math.max(-1.2,Math.min(1.4,pitch-dy*k))}
+document.addEventListener("mousemove",e=>{if(run&&document.pointerLockElement===cv)look(e.movementX,e.movementY)});
+cv.addEventListener("pointerdown",e=>{if(!run)return;if(e.pointerType==="mouse")return;{cv._p=e.pointerId;cv._x=e.clientX;cv._y=e.clientY;cv.setPointerCapture(e.pointerId)}});
+cv.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse"&&cv._p===e.pointerId){look((e.clientX-cv._x)*3,(e.clientY-cv._y)*3);cv._x=e.clientX;cv._y=e.clientY}});
+cv.addEventListener("pointerup",e=>{if(cv._p===e.pointerId)cv._p=null});document.addEventListener("mousedown",e=>{if(!run||touch||e.target!==cv)return;if(document.pointerLockElement!==cv){try{cv.requestPointerLock()}catch(x){}return}if(e.button===2)ads=true;else if(e.button===0){hold=true;fire()}});
+addEventListener("mouseup",e=>{if(e.button===2)ads=false;else hold=false});
+const fb=$("fire");fb.addEventListener("pointerdown",e=>{e.preventDefault();hold=true;fire()});["pointerup","pointercancel","pointerleave"].forEach(t=>fb.addEventListener(t,()=>hold=false));
+const ab=$("ads");ab.addEventListener("pointerdown",e=>{e.preventDefault();ads=!ads;ab.style.background=ads?"rgba(77,255,136,.55)":""});
+document.addEventListener("contextmenu",e=>e.preventDefault());
+
+function loop(n){if(!run)return;const dt=Math.min((n-last)/1000,.05);last=n;tl-=dt;const g=W[wk];
+if(hold&&g.auto)fire();
+T.slice().forEach(o=>{if(o.life&&(n-o.born)/1000>o.life){rm(o);fill()}});
+if(mk==="track"&&T[0]){const o=T[0],q=o.m.position;o.nt-=dt;if(o.nt<=0){o.nt=.5+Math.random()*1.1;o.th=Math.random()*6.283}
+o.h+=Math.atan2(Math.sin(o.th-o.h),Math.cos(o.th-o.h))*Math.min(1,dt*5);q.x+=Math.cos(o.h)*spd*dt;q.y+=Math.sin(o.h)*spd*dt;
+if(q.x>10||q.x<-10){q.x=Math.max(-10,Math.min(10,q.x));o.h=Math.PI-o.h;o.th=o.h}if(q.y>5.5||q.y<1){q.y=Math.max(1,Math.min(5.5,q.y));o.h=-o.h;o.th=o.h}let on=false;
+if(hold){hT+=dt;ray.setFromCamera(new THREE.Vector2(0,0),cam);on=ray.intersectObjects(M).length>0;if(on){onT+=dt;score+=dt*100}if(n>nfx){kickFX();nfx=n+90}}
+o.m.material=on?mG:mR}
+adsT+=((ads?1:0)-adsT)*Math.min(1,dt*12);cam.fov=75+(g.ads.fov-75)*adsT;cam.updateProjectionMatrix();
+cam.rotation.set(pitch,yaw,0);rk*=.82;flT-=dt;gun.position.set(.2*(1-adsT),-.2+.115*adsT,gz+rk);gun.visible=!(g.scope&&adsT>.6);flash.visible=flT>0;
+$("sc").classList.toggle("hide",!(g.scope&&adsT>.6));$("ch").classList.toggle("hide",adsT>.3);$("rt").classList.toggle("hide",!!g.scope||adsT<.6);R.render(S,cam);
+$("hS").textContent=MODES[mk].n+" · "+Math.round(score);$("hT").textContent=Math.max(0,Math.ceil(tl));
+$("hA").textContent=mk==="track"?"":n<relUntil?"Reloading…":"Ammo "+ammo;
+$("hM").textContent=mk==="track"?(hT?Math.round(onT/hT*100)+"%":""):(shots?Math.round(hits/shots*100)+"%":"");
+$("stS").textContent=Math.round(score);$("stA").textContent=$("hM").textContent||"--%";$("stH").textContent=mk==="track"?onT.toFixed(1)+"s":hits;$("stB").textContent=bestOf();
+if(tl<=0){finish();return}requestAnimationFrame(loop)}
+function finish(){run=false;hold=false;if(document.pointerLockElement)document.exitPointerLock();
+["hud","ch","sc","fire","ads","rt","endS"].forEach(i=>$(i).classList.add("hide"));const sc=Math.round(score),b=bestOf(),nb=sc>b;if(nb)sv("rv4_b_"+mk+wk+(mk==="track"?"s"+spd:""),sc);
+$("rS").textContent=sc;$("rA").textContent=Math.round((mk==="track"?(hT?onT/hT:0):(shots?hits/shots:0))*100)+"%";
+$("rK").textContent=mk==="track"?"-":hits;$("rH").textContent=mk==="track"?"-":bulls;
+$("rB").textContent=nb?"🏆 New record!":"Best: "+b;$("end").classList.remove("hide");sel();const ac=parseInt($("rA").textContent)||0;$("cT").textContent=ac<55?"Slow the shot down":ac>=85?"Ready for a tighter window":"Build a steadier rhythm";$("cC").textContent=ac<55?"Settle the crosshair on the target before you fire, or aim down sights for steadier shots.":ac>=85?"You are landing "+ac+"%. Try Precision, or raise the tracking ball speed.":"You landed "+ac+"%. Keep your eyes ahead of the target and use aim down sights on longer shots.";}
+$("start").onclick=begin;$("again").onclick=begin;$("mn").onclick=e=>{e.preventDefault();$("end").classList.add("hide");$("menu").classList.remove("hide")};
+sel();R.render(S,cam);
+$("endS").onclick=()=>{if(run)finish()};
+</script></body></html>
